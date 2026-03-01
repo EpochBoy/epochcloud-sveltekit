@@ -1,13 +1,16 @@
 # Build stage
 FROM docker.io/library/node:22-alpine AS builder
 
+# Enable corepack for pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy source
 COPY . .
@@ -21,10 +24,10 @@ ENV PUBLIC_VERSION=${VERSION}
 ENV PUBLIC_COMMIT=${COMMIT}
 ENV PUBLIC_BUILD_TIME=${BUILD_TIME}
 
-RUN npm run build
+RUN pnpm build
 
 # Prune dev dependencies
-RUN npm prune --production
+RUN pnpm prune --prod
 
 # Runtime stage
 FROM docker.io/library/node:22-alpine
