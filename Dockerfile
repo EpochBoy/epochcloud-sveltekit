@@ -42,9 +42,8 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 
-# Non-root user
-RUN adduser -D -u 1000 appuser
-USER appuser
+# Non-root user (node:22-alpine already has 'node' user at uid 1000)
+USER node
 
 EXPOSE 3000
 
