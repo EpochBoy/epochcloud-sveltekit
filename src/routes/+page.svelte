@@ -19,6 +19,35 @@
 	let authLoginEmail = $state('');
 	let authLoginPass = $state('');
 
+	// RabbitMQ state
+	let rmqStatusText = $state('Not checked');
+	let rmqStatusOk = $state(false);
+	let rmqMessage = $state('');
+	let rmqResult = $state('');
+	let rmqResultOk = $state(false);
+	let rmqResultVisible = $state(false);
+
+	// DefectDojo state
+	let ddStatusText = $state('Not checked');
+	let ddStatusOk = $state(false);
+
+	// Valkey state
+	let vkStatusText = $state('Not checked');
+	let vkStatusOk = $state(false);
+	let vkSetKey = $state('demo');
+	let vkSetValue = $state('hello');
+	let vkSetTtl = $state('300');
+	let vkGetKey = $state('demo');
+	let vkResult = $state('');
+	let vkResultOk = $state(false);
+	let vkResultVisible = $state(false);
+
+	// Chaos test state
+	let chaosResult = $state('');
+	let chaosResultOk = $state(false);
+	let chaosResultVisible = $state(false);
+	let chaosLoadCount = $state('10');
+
 	// GO Feature Flag state
 	let ffStatusText = $state('Not checked');
 	let ffStatusOk = $state(false);
@@ -112,6 +141,118 @@
 			);
 		} catch (err) {
 			showAuthResult(`Network error: ${err}`, false);
+		}
+	}
+
+	async function checkRmqStatus() {
+		rmqStatusText = 'Checking...';
+		try {
+			const resp = await fetch('/rabbitmq/status');
+			const d = await resp.json();
+			if (d.connected) {
+				rmqStatusText = '● Connected';
+				rmqStatusOk = true;
+			} else {
+				rmqStatusText = '● Disconnected';
+				rmqStatusOk = false;
+			}
+		} catch (err) {
+			rmqStatusText = `● Error: ${err}`;
+			rmqStatusOk = false;
+		}
+	}
+
+	async function rmqPublish() {
+		const params = rmqMessage ? `?message=${encodeURIComponent(rmqMessage)}` : '';
+		try {
+			const resp = await fetch(`/rabbitmq/publish${params}`);
+			const d = await resp.json();
+			rmqResult = d.success ? `✓ Published: ${d.message}` : `✗ ${d.error}`;
+			rmqResultOk = d.success;
+			rmqResultVisible = true;
+		} catch (err) {
+			rmqResult = `✗ ${err}`;
+			rmqResultOk = false;
+			rmqResultVisible = true;
+		}
+	}
+
+	async function checkDdStatus() {
+		ddStatusText = 'Checking...';
+		try {
+			const resp = await fetch('/defectdojo/status');
+			const d = await resp.json();
+			if (d.connected) {
+				ddStatusText = `● Connected — ${d.product_count} products`;
+				ddStatusOk = true;
+			} else {
+				ddStatusText = '● Disconnected';
+				ddStatusOk = false;
+			}
+		} catch (err) {
+			ddStatusText = `● Error: ${err}`;
+			ddStatusOk = false;
+		}
+	}
+
+	async function checkVkStatus() {
+		vkStatusText = 'Checking...';
+		try {
+			const resp = await fetch('/cache/status');
+			const d = await resp.json();
+			if (d.connected) {
+				vkStatusText = '● Connected';
+				vkStatusOk = true;
+			} else {
+				vkStatusText = '● Disconnected';
+				vkStatusOk = false;
+			}
+		} catch (err) {
+			vkStatusText = `● Error: ${err}`;
+			vkStatusOk = false;
+		}
+	}
+
+	async function vkSet() {
+		try {
+			const resp = await fetch(`/cache/set?key=${encodeURIComponent(vkSetKey)}&value=${encodeURIComponent(vkSetValue)}&ttl=${vkSetTtl}`);
+			const d = await resp.json();
+			vkResult = d.success ? `✓ Set "${d.key}" = "${d.value}" (TTL: ${d.ttl_seconds}s)` : `✗ ${d.error}`;
+			vkResultOk = d.success;
+			vkResultVisible = true;
+		} catch (err) {
+			vkResult = `✗ ${err}`;
+			vkResultOk = false;
+			vkResultVisible = true;
+		}
+	}
+
+	async function vkGet() {
+		try {
+			const resp = await fetch(`/cache/get?key=${encodeURIComponent(vkGetKey)}`);
+			const d = await resp.json();
+			vkResult = d.cache_hit ? `✓ "${d.key}" = "${d.value}"` : `✗ Cache miss for "${d.key}"`;
+			vkResultOk = d.cache_hit;
+			vkResultVisible = true;
+		} catch (err) {
+			vkResult = `✗ ${err}`;
+			vkResultOk = false;
+			vkResultVisible = true;
+		}
+	}
+
+	async function chaosAction(action: string, count?: string) {
+		const params = action === 'load' ? `?action=load&count=${count || '10'}` : `?action=${action}`;
+		try {
+			const resp = await fetch(`/chaos${params}`);
+			const d = await resp.json();
+			chaosResult = JSON.stringify(d, null, 2);
+			chaosResultOk = !d.error;
+			chaosResultVisible = true;
+		} catch (err) {
+			chaosResult = `Error: ${err}`;
+			chaosResultOk = false;
+			chaosResultVisible = true;
 		}
 	}
 
@@ -267,12 +408,22 @@
 		<!-- RabbitMQ Demo -->
 		<div class="card">
 			<h2>🐰 RabbitMQ Demo</h2>
-			<div class="api-list">
-				<code>GET /rabbitmq/status</code>
-				<code>GET /rabbitmq/publish</code>
-				<code>GET /rabbitmq/publish?message=Hello</code>
+			<p class="card-desc">Message queue for async workloads</p>
+
+			<div class="auth-status-row">
+				<button onclick={checkRmqStatus} class="auth-status-btn">Check Status 🔗</button>
+				<span class="auth-indicator" class:ok={rmqStatusOk}>{rmqStatusText}</span>
 			</div>
-			{#if !data.features.rabbitmq}
+
+			{#if data.features.rabbitmq}
+				<div class="email-form">
+					<input type="text" bind:value={rmqMessage} placeholder="Message (optional)" class="email-input" />
+					<button onclick={rmqPublish} class="email-btn">Publish 📤</button>
+				</div>
+				{#if rmqResultVisible}
+					<p class="auth-result" class:ok={rmqResultOk} class:error={!rmqResultOk}>{rmqResult}</p>
+				{/if}
+			{:else}
 				<p class="disabled-note">⚠ Disabled (RABBITMQ_HOST not set)</p>
 			{/if}
 		</div>
@@ -280,19 +431,31 @@
 		<!-- Chaos Testing -->
 		<div class="card">
 			<h2>🔥 Chaos Testing</h2>
-			<div class="api-list">
-				<code>GET /chaos?action=error</code>
-				<code>GET /chaos?action=slow</code>
-				<code>GET /chaos?action=load&count=10</code>
+			<p class="card-desc">Trigger errors, latency, and load for observability testing</p>
+
+			<div class="chaos-buttons">
+				<button onclick={() => chaosAction('error')} class="chaos-btn error">Trigger Error 💥</button>
+				<button onclick={() => chaosAction('slow')} class="chaos-btn slow">Trigger Slow 🐌</button>
 			</div>
+			<div class="email-form" style="margin-top: 0.5rem;">
+				<input type="number" bind:value={chaosLoadCount} placeholder="Count" class="email-input" style="max-width: 80px;" />
+				<button onclick={() => chaosAction('load', chaosLoadCount)} class="chaos-btn load">Load Test ⚡</button>
+			</div>
+			{#if chaosResultVisible}
+				<pre class="ff-result" class:ok={chaosResultOk} class:error={!chaosResultOk}>{chaosResult}</pre>
+			{/if}
 		</div>
 
 		<!-- DefectDojo Security -->
 		<div class="card">
 			<h2>🛡️ DefectDojo Security</h2>
-			<div class="api-list">
-				<code>GET /defectdojo/status</code>
+			<p class="card-desc">Vulnerability management platform</p>
+
+			<div class="auth-status-row">
+				<button onclick={checkDdStatus} class="auth-status-btn">Check Status 🔗</button>
+				<span class="auth-indicator" class:ok={ddStatusOk}>{ddStatusText}</span>
 			</div>
+
 			{#if !data.features.defectdojo}
 				<p class="disabled-note">⚠ Disabled (DEFECTDOJO_URL not set)</p>
 			{/if}
@@ -333,12 +496,32 @@
 		<!-- Valkey Cache Demo -->
 		<div class="card">
 			<h2>💾 Valkey Cache Demo</h2>
-			<div class="api-list">
-				<code>GET /cache/status</code>
-				<code>GET /cache/set?key=demo&value=hello&ttl=300</code>
-				<code>GET /cache/get?key=demo</code>
+			<p class="card-desc">In-memory cache for fast key-value storage</p>
+
+			<div class="auth-status-row">
+				<button onclick={checkVkStatus} class="auth-status-btn">Check Status 🔗</button>
+				<span class="auth-indicator" class:ok={vkStatusOk}>{vkStatusText}</span>
 			</div>
-			{#if !data.features.valkey}
+
+			{#if data.features.valkey}
+				<div class="auth-forms">
+					<div class="auth-form-col">
+						<p class="auth-form-label">Set Value</p>
+						<input type="text" bind:value={vkSetKey} placeholder="Key" class="auth-input" />
+						<input type="text" bind:value={vkSetValue} placeholder="Value" class="auth-input" />
+						<input type="number" bind:value={vkSetTtl} placeholder="TTL (seconds)" class="auth-input" />
+						<button onclick={vkSet} class="auth-btn register">Set 💾</button>
+					</div>
+					<div class="auth-form-col">
+						<p class="auth-form-label">Get Value</p>
+						<input type="text" bind:value={vkGetKey} placeholder="Key" class="auth-input" />
+						<button onclick={vkGet} class="auth-btn login">Get 🔍</button>
+					</div>
+				</div>
+				{#if vkResultVisible}
+					<p class="auth-result" class:ok={vkResultOk} class:error={!vkResultOk}>{vkResult}</p>
+				{/if}
+			{:else}
 				<p class="disabled-note">⚠ Disabled (VALKEY_HOST not set)</p>
 			{/if}
 		</div>
@@ -807,6 +990,39 @@
 	.ff-result.error {
 		background: rgba(255, 100, 100, 0.2);
 		color: #ff6b6b;
+	}
+
+	/* Chaos testing styles */
+	.chaos-buttons {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.chaos-btn {
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
+		border: none;
+		font-weight: 600;
+		cursor: pointer;
+		font-size: 0.8rem;
+		color: #1a1a2e;
+	}
+
+	.chaos-btn.error {
+		background: linear-gradient(90deg, #ff6b6b, #ff4757);
+	}
+
+	.chaos-btn.slow {
+		background: linear-gradient(90deg, #ffa502, #ff6348);
+	}
+
+	.chaos-btn.load {
+		background: linear-gradient(90deg, #00d2ff, #3a7bd5);
+	}
+
+	.chaos-btn:hover {
+		opacity: 0.9;
 	}
 
 	footer {
