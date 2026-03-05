@@ -1,8 +1,10 @@
 import type { PageServerLoad } from './$types';
 import { config } from '$lib/server/config.js';
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = async ({ url }) => {
+	const domain = url.hostname.split('.').slice(-2).join('.');
 	return {
+		domain,
 		version: config.version,
 		commit: config.commit,
 		buildTime: config.buildTime,

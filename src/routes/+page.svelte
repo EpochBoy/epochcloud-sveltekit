@@ -3,14 +3,6 @@
 
 	let { data }: { data: PageData } = $props();
 
-	// --------------- Domain computation ---------------
-	let domain = $state('');
-	$effect(() => {
-		if (typeof window !== 'undefined') {
-			domain = window.location.hostname.split('.').slice(-2).join('.');
-		}
-	});
-
 	// --------------- Email state ---------------
 	let emailInput = $state('');
 	let emailStatus = $state('');
@@ -668,7 +660,7 @@
 		<nav class="stage-nav">
 			{#each stages as stage (stage.label)}
 				<a
-					href="https://{stage.prefix}.{domain || 'example.com'}"
+					href="https://{stage.prefix}.{data.domain}"
 					class="stage-pill"
 					class:active={data.environment === (stage.label === 'Prod' ? 'prod' : stage.label.toLowerCase())}
 				>
@@ -766,7 +758,7 @@
 		</div>
 		<div class="dash-grid">
 			{#each dashboards as db (db.sub)}
-				<a href="https://{db.sub}.{domain || 'example.com'}" target="_blank" rel="noopener" class="dash-card">
+				<a href="https://{db.sub}.{data.domain}" target="_blank" rel="noopener" class="dash-card">
 					<span class="dash-name">{db.name}</span>
 					<span class="dash-desc">{db.desc}</span>
 				</a>
@@ -962,8 +954,8 @@
 						</div>
 					</div>
 				{/if}
-				{#if data.features.defectdojo && domain}
-					<a href="https://defectdojo.{domain}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm w-full" style="margin-top:0.5rem">Open Dashboard</a>
+				{#if data.features.defectdojo && data.domain}
+					<a href="https://defectdojo.{data.domain}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm w-full" style="margin-top:0.5rem">Open Dashboard</a>
 				{:else if !data.features.defectdojo}
 					<p class="disabled-msg">Not configured — DEFECTDOJO_URL not set</p>
 				{/if}
