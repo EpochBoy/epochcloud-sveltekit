@@ -1540,33 +1540,6 @@
 		{/if}
 	</section>
 
-	<!-- ═══ Pending Stack ═══ -->
-	<section class="section">
-		<h3 class="demo-category" style="border-color: rgba(255,255,255,0.1); border-style: dashed;">
-			Pending
-		</h3>
-		<div class="demo-grid">
-			<div class="card" style="border-style: dashed; opacity: 0.7;">
-				<div class="card-head">
-					<h3>LitmusChaos</h3>
-					<span class="card-tag">Chaos Engineering</span>
-				</div>
-				<p class="card-desc">
-					CNCF chaos engineering platform — infrastructure-level fault injection, experiment
-					scheduling, and GameDay workflows
-				</p>
-				<div class="info-grid" style="margin-top: 0.75rem;">
-					<span class="card-tag">Pod Kill</span>
-					<span class="card-tag">Network Loss</span>
-					<span class="card-tag">Node Drain</span>
-					<span class="card-tag">CPU Hog</span>
-					<span class="card-tag">Disk Fill</span>
-					<span class="card-tag">CRD-based</span>
-				</div>
-			</div>
-		</div>
-	</section>
-
 	<!-- ─── Footer ─── -->
 	<footer class="footer">
 		<span>SvelteKit 5</span>
