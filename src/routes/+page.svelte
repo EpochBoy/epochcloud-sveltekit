@@ -829,13 +829,22 @@
 							</div>
 							<div class="input-row">
 								<span class="input-label">Count</span>
-								<input type="number" bind:value={rmqBatchCount} min="1" max="50" class="input input-sm" style="max-width:70px" />
+								<input
+									type="number"
+									bind:value={rmqBatchCount}
+									min="1"
+									max="50"
+									class="input input-sm"
+									style="max-width:70px"
+								/>
 							</div>
 							<button onclick={rmqPublish} class="btn btn-primary btn-sm w-full">Publish</button>
 						</div>
 						<div class="form-col">
 							<span class="form-label">Consume</span>
-							<button onclick={rmqConsume} class="btn btn-outline btn-sm w-full">Check Buffer</button>
+							<button onclick={rmqConsume} class="btn btn-outline btn-sm w-full"
+								>Check Buffer</button
+							>
 						</div>
 					</div>
 					{#if rmqResultVisible}
@@ -1053,7 +1062,9 @@
 					<h3>Prometheus</h3>
 					<span class="card-tag">Metrics</span>
 				</div>
-				<p class="card-desc">Counter &amp; in-flight are per-pod, HTTP total aggregated via Prometheus</p>
+				<p class="card-desc">
+					Counter &amp; in-flight are per-pod, HTTP total aggregated via Prometheus
+				</p>
 				<div class="btn-row">
 					<button onclick={() => loadPromMetrics(true)} class="btn btn-primary btn-sm"
 						>Increment Counter</button
@@ -1072,7 +1083,8 @@
 						<div class="prom-stat">
 							<span class="prom-val">{promHttpTotal.toLocaleString()}</span>
 							<span class="prom-label">HTTP Total</span>
-							<span class="prom-scope">{promSource === 'prometheus' ? 'all pods' : 'this pod'}</span>
+							<span class="prom-scope">{promSource === 'prometheus' ? 'all pods' : 'this pod'}</span
+							>
 						</div>
 						<div class="prom-stat">
 							<span class="prom-val">{promActive}</span>
@@ -1092,16 +1104,21 @@
 					<h3>Linkerd</h3>
 					<span class="card-tag">Service Mesh</span>
 				</div>
-				<p class="card-desc">mTLS proxy — inbound from meshed services, outbound to meshed services</p>
+				<p class="card-desc">
+					mTLS proxy — inbound from meshed services, outbound to meshed services
+				</p>
 				<button onclick={loadLinkerdStats} class="btn btn-outline btn-sm w-full">Load Stats</button>
 				{#if linkerdLoaded}
 					{#if linkerdData}
 						<div class="linkerd-sections">
 							<div class="linkerd-dir">
-								<span class="linkerd-dir-label">Outbound <span class="linkerd-dir-hint">this pod &rarr; services</span></span>
+								<span class="linkerd-dir-label"
+									>Outbound <span class="linkerd-dir-hint">this pod &rarr; services</span></span
+								>
 								<div class="linkerd-stats">
 									<div class="linkerd-stat">
-										<span class="linkerd-val">{linkerdData.outbound.requests.toLocaleString()}</span>
+										<span class="linkerd-val">{linkerdData.outbound.requests.toLocaleString()}</span
+										>
 										<span class="linkerd-stat-label">Requests</span>
 									</div>
 									<div class="linkerd-stat">
@@ -1109,7 +1126,8 @@
 										<span class="linkerd-stat-label">Success</span>
 									</div>
 									<div class="linkerd-stat">
-										<span class="linkerd-val">{linkerdData.outbound.failures.toLocaleString()}</span>
+										<span class="linkerd-val">{linkerdData.outbound.failures.toLocaleString()}</span
+										>
 										<span class="linkerd-stat-label">Failures</span>
 									</div>
 									<div class="linkerd-stat">
@@ -1119,7 +1137,9 @@
 								</div>
 							</div>
 							<div class="linkerd-dir">
-								<span class="linkerd-dir-label">Inbound <span class="linkerd-dir-hint">services &rarr; this pod</span></span>
+								<span class="linkerd-dir-label"
+									>Inbound <span class="linkerd-dir-hint">services &rarr; this pod</span></span
+								>
 								<div class="linkerd-stats">
 									<div class="linkerd-stat">
 										<span class="linkerd-val">{linkerdData.inbound.requests.toLocaleString()}</span>
