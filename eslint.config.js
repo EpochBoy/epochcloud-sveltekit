@@ -29,6 +29,7 @@ export default [
         clearInterval: "readonly",
         process: "readonly",
         Buffer: "readonly",
+        AbortController: "readonly",
         performance: "readonly",
         window: "readonly",
         document: "readonly",

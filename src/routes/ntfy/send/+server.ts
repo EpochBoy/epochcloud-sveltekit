@@ -16,10 +16,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Sanitize topic: alphanumeric, hyphens, underscores only — no path traversal
 		const topic = rawTopic.replace(/[^a-zA-Z0-9_-]/g, '');
 		if (!topic) {
-			return new Response(
-				JSON.stringify({ success: false, error: 'Invalid topic name' }),
-				{ status: 400, headers: { 'Content-Type': 'application/json' } }
-			);
+			return new Response(JSON.stringify({ success: false, error: 'Invalid topic name' }), {
+				status: 400,
+				headers: { 'Content-Type': 'application/json' }
+			});
 		}
 		const message = body.message || `Hello from SvelteKit (${config.hostname})`;
 		const title = body.title || 'EpochCloud Demo';
@@ -55,9 +55,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	} catch (err) {
 		log('error', 'ntfy send error', { error: String(err) });
-		return new Response(
-			JSON.stringify({ success: false, error: String(err) }),
-			{ status: 500, headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ success: false, error: String(err) }), {
+			status: 500,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 };

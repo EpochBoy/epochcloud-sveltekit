@@ -5,17 +5,20 @@ import { log } from '$lib/server/logger.js';
 export const GET: RequestHandler = async ({ url }) => {
 	if (!config.knative.enabled) {
 		return new Response(
-			JSON.stringify({ success: false, error: 'Knative not configured (KNATIVE_FIBONACCI_URL not set)' }),
+			JSON.stringify({
+				success: false,
+				error: 'Knative not configured (KNATIVE_FIBONACCI_URL not set)'
+			}),
 			{ status: 503, headers: { 'Content-Type': 'application/json' } }
 		);
 	}
 
 	const n = parseInt(url.searchParams.get('n') || '10');
 	if (isNaN(n) || n < 0 || n > 50) {
-		return new Response(
-			JSON.stringify({ success: false, error: 'n must be between 0 and 50' }),
-			{ status: 400, headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ success: false, error: 'n must be between 0 and 50' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 
 	const startTime = performance.now();

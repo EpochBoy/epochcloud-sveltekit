@@ -104,6 +104,8 @@
 	let promHttpTotal = $state(0);
 	let promActive = $state(0);
 	let promLoaded = $state(false);
+	let promPod = $state('');
+	let promSource = $state('');
 
 	// =============== Handler Functions ===============
 
@@ -486,6 +488,8 @@
 			promDemoCount = d.demo_counter;
 			promHttpTotal = d.http_requests_total;
 			promActive = d.active_requests;
+			promPod = d.pod || '';
+			promSource = d.source || '';
 			promLoaded = true;
 		} catch {
 			promLoaded = false;
@@ -596,6 +600,19 @@
 		{ name: 'Rybbit', sub: 'analytics', desc: 'Web Analytics' }
 	];
 
+	// =============== Auto-check on mount ===============
+	$effect(() => {
+		checkAuthStatus();
+		checkRmqStatus();
+		checkVkStatus();
+		checkNtfyStatus();
+		checkCsStatus();
+		checkDdStatus();
+		checkFfStatus();
+		loadPromMetrics();
+		loadLinkerdStats();
+	});
+
 	const severityColors: Record<string, string> = {
 		Critical: 'var(--danger)',
 		High: '#f97316',
@@ -604,6 +621,18 @@
 		Info: 'var(--muted-fg)'
 	};
 </script>
+
+{#snippet statusIcon(ok: boolean, checked: boolean)}
+	<span class="status-icon" class:ok class:checked>
+		{#if checked}
+			{#if ok}
+				<svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>
+			{:else}
+				<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z"/></svg>
+			{/if}
+		{/if}
+	</span>
+{/snippet}
 
 <svelte:head>
 	<title>EpochCloud</title>
@@ -739,16 +768,18 @@
 			<h2 class="section-title">Interactive Demos</h2>
 		</div>
 
+		<!-- ═══ Infrastructure ═══ -->
+		<h3 class="demo-category">Infrastructure</h3>
 		<div class="demo-grid">
 			<!-- ── RabbitMQ ── -->
-			<div class="card card-wide">
+			<div class="card">
 				<div class="card-head">
 					<h3>RabbitMQ</h3>
 					<span class="card-tag">Message Queue</span>
 				</div>
 				<div class="status-row">
 					<button onclick={checkRmqStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={rmqStatusOk}></span>
+					{@render statusIcon(rmqStatusOk, rmqStatusText !== 'Not checked')}
 					<span class="status-text">{rmqStatusText}</span>
 				</div>
 				{#if data.features.rabbitmq}
@@ -777,14 +808,14 @@
 			</div>
 
 			<!-- ── Valkey Cache ── -->
-			<div class="card card-wide">
+			<div class="card">
 				<div class="card-head">
 					<h3>Valkey Cache</h3>
 					<span class="card-tag">Key-Value Store</span>
 				</div>
 				<div class="status-row">
 					<button onclick={checkVkStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={vkStatusOk}></span>
+					{@render statusIcon(vkStatusOk, vkStatusText !== 'Not checked')}
 					<span class="status-text">{vkStatusText}</span>
 				</div>
 				{#if data.features.valkey}
@@ -810,15 +841,38 @@
 				{/if}
 			</div>
 
+			<!-- ── Email ── -->
+			<div class="card">
+				<div class="card-head">
+					<h3>Email</h3>
+					<span class="card-tag">SMTP</span>
+				</div>
+				{#if data.features.smtp}
+					<div class="form-row">
+						<input type="email" bind:value={emailInput} placeholder="recipient@example.com" class="input" />
+						<button onclick={sendEmail} class="btn btn-primary btn-sm">Send</button>
+					</div>
+					{#if emailStatus}
+						<p class="result" class:ok={!emailError} class:err={emailError}>{emailStatus}</p>
+					{/if}
+				{:else}
+					<p class="disabled-msg">Not configured — SMTP_HOST not set</p>
+				{/if}
+			</div>
+		</div>
+
+		<!-- ═══ Security ═══ -->
+		<h3 class="demo-category">Security</h3>
+		<div class="demo-grid">
 			<!-- ── BetterAuth ── -->
-			<div class="card card-wide">
+			<div class="card">
 				<div class="card-head">
 					<h3>BetterAuth</h3>
 					<span class="card-tag">App Auth</span>
 				</div>
 				<div class="status-row">
 					<button onclick={checkAuthStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={authStatusOk}></span>
+					{@render statusIcon(authStatusOk, authStatusText !== 'Not checked')}
 					<span class="status-text">{authStatusText}</span>
 				</div>
 				{#if data.features.betterauth}
@@ -846,15 +900,146 @@
 				{/if}
 			</div>
 
+			<!-- ── CrowdSec ── -->
+			<div class="card">
+				<div class="card-head">
+					<h3>CrowdSec</h3>
+					<span class="card-tag">Threat Intel</span>
+				</div>
+				<div class="status-row">
+					<button onclick={checkCsStatus} class="btn btn-outline btn-sm">Check Status</button>
+					{@render statusIcon(csStatusOk, csStatusText !== 'Not checked')}
+					<span class="status-text">{csStatusText}</span>
+				</div>
+				{#if data.features.crowdsec}
+					<div class="form-row">
+						<input type="text" bind:value={csIp} placeholder="IP address" class="input" />
+						<button onclick={csCheckIp} class="btn btn-secondary btn-sm">Check IP</button>
+					</div>
+					{#if csResultVisible}
+						<p class="result" class:ok={csResultOk} class:err={!csResultOk}>{csResult}</p>
+					{/if}
+				{:else}
+					<p class="disabled-msg">Not configured — CROWDSEC_LAPI_URL not set</p>
+				{/if}
+			</div>
+
+			<!-- ── DefectDojo ── -->
+			<div class="card">
+				<div class="card-head">
+					<h3>DefectDojo</h3>
+					<span class="card-tag">Security</span>
+				</div>
+				<div class="status-row">
+					<button onclick={checkDdStatus} class="btn btn-outline btn-sm">Check Status</button>
+					{@render statusIcon(ddStatusOk, ddStatusText !== 'Not checked')}
+					<span class="status-text">{ddStatusText}</span>
+				</div>
+				{#if ddFindings}
+					<div class="findings-grid">
+						{#each Object.entries(ddFindings.by_severity) as [sev, count]}
+							<div class="finding-item">
+								<span class="finding-dot" style="background:{severityColors[sev] || 'var(--muted-fg)'}"></span>
+								<span class="finding-label">{sev}</span>
+								<span class="finding-count">{count}</span>
+							</div>
+						{/each}
+						<div class="finding-item finding-total">
+							<span class="finding-label">Total</span>
+							<span class="finding-count">{ddFindings.total}</span>
+						</div>
+					</div>
+				{/if}
+				{#if data.features.defectdojo && domain}
+					<a href="https://defectdojo.{domain}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm w-full" style="margin-top:0.5rem">Open Dashboard</a>
+				{:else if !data.features.defectdojo}
+					<p class="disabled-msg">Not configured — DEFECTDOJO_URL not set</p>
+				{/if}
+			</div>
+		</div>
+
+		<!-- ═══ Observability ═══ -->
+		<h3 class="demo-category">Observability</h3>
+		<div class="demo-grid">
+			<!-- ── Prometheus Demo ── -->
+			<div class="card">
+				<div class="card-head">
+					<h3>Prometheus</h3>
+					<span class="card-tag">Metrics</span>
+				</div>
+				<p class="card-desc">Aggregated app metrics via Prometheus API</p>
+				<div class="btn-row">
+					<button onclick={() => loadPromMetrics(true)} class="btn btn-primary btn-sm">Increment Counter</button>
+					<button onclick={() => loadPromMetrics(false)} class="btn btn-outline btn-sm">Refresh</button>
+				</div>
+				{#if promLoaded}
+					<div class="prom-stats">
+						<div class="prom-stat">
+							<span class="prom-val">{promDemoCount}</span>
+							<span class="prom-label">Demo Counter</span>
+						</div>
+						<div class="prom-stat">
+							<span class="prom-val">{promHttpTotal.toLocaleString()}</span>
+							<span class="prom-label">HTTP Requests</span>
+						</div>
+						<div class="prom-stat">
+							<span class="prom-val">{promActive}</span>
+							<span class="prom-label">Active</span>
+						</div>
+					</div>
+					<div class="prom-meta">
+						<span class="prom-meta-item">Pod: {promPod}</span>
+						<span class="prom-meta-item">Source: {promSource}</span>
+					</div>
+				{/if}
+			</div>
+
+			<!-- ── Linkerd Mesh ── -->
+			<div class="card">
+				<div class="card-head">
+					<h3>Linkerd</h3>
+					<span class="card-tag">Service Mesh</span>
+				</div>
+				<p class="card-desc">mTLS sidecar proxy metrics</p>
+				<button onclick={loadLinkerdStats} class="btn btn-outline btn-sm w-full">Load Stats</button>
+				{#if linkerdResultVisible}
+					<pre class="result-pre" class:ok={linkerdResultOk} class:err={!linkerdResultOk}>{linkerdResult}</pre>
+				{/if}
+			</div>
+
+			<!-- ── Chaos Testing ── -->
+			<div class="card">
+				<div class="card-head">
+					<h3>Chaos Testing</h3>
+					<span class="card-tag">Observability</span>
+				</div>
+				<p class="card-desc">Trigger errors, latency, and load</p>
+				<div class="btn-row">
+					<button onclick={() => chaosAction('error')} class="btn btn-danger btn-sm">Error</button>
+					<button onclick={() => chaosAction('slow')} class="btn btn-warning btn-sm">Slow</button>
+				</div>
+				<div class="form-row" style="margin-top:0.5rem">
+					<input type="number" bind:value={chaosLoadCount} class="input input-sm" style="max-width:70px" />
+					<button onclick={() => chaosAction('load', chaosLoadCount)} class="btn btn-accent btn-sm">Load Test</button>
+				</div>
+				{#if chaosResultVisible}
+					<pre class="result-pre" class:ok={chaosResultOk} class:err={!chaosResultOk}>{chaosResult}</pre>
+				{/if}
+			</div>
+		</div>
+
+		<!-- ═══ Platform ═══ -->
+		<h3 class="demo-category">Platform</h3>
+		<div class="demo-grid">
 			<!-- ── Feature Flags ── -->
-			<div class="card card-wide">
+			<div class="card">
 				<div class="card-head">
 					<h3>Feature Flags</h3>
 					<span class="card-tag">GO Feature Flag</span>
 				</div>
 				<div class="status-row">
 					<button onclick={checkFfStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={ffStatusOk}></span>
+					{@render statusIcon(ffStatusOk, ffStatusText !== 'Not checked')}
 					<span class="status-text">{ffStatusText}</span>
 				</div>
 				{#if data.features.gofeatureflag}
@@ -884,78 +1069,6 @@
 				{/if}
 			</div>
 
-			<!-- ── Chaos Testing ── -->
-			<div class="card">
-				<div class="card-head">
-					<h3>Chaos Testing</h3>
-					<span class="card-tag">Observability</span>
-				</div>
-				<p class="card-desc">Trigger errors, latency, and load</p>
-				<div class="btn-row">
-					<button onclick={() => chaosAction('error')} class="btn btn-danger btn-sm">Error</button>
-					<button onclick={() => chaosAction('slow')} class="btn btn-warning btn-sm">Slow</button>
-				</div>
-				<div class="form-row" style="margin-top:0.5rem">
-					<input type="number" bind:value={chaosLoadCount} class="input input-sm" style="max-width:70px" />
-					<button onclick={() => chaosAction('load', chaosLoadCount)} class="btn btn-accent btn-sm">Load Test</button>
-				</div>
-				{#if chaosResultVisible}
-					<pre class="result-pre" class:ok={chaosResultOk} class:err={!chaosResultOk}>{chaosResult}</pre>
-				{/if}
-			</div>
-
-			<!-- ── DefectDojo ── -->
-			<div class="card">
-				<div class="card-head">
-					<h3>DefectDojo</h3>
-					<span class="card-tag">Security</span>
-				</div>
-				<div class="status-row">
-					<button onclick={checkDdStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={ddStatusOk}></span>
-					<span class="status-text">{ddStatusText}</span>
-				</div>
-				{#if ddFindings}
-					<div class="findings-grid">
-						{#each Object.entries(ddFindings.by_severity) as [sev, count]}
-							<div class="finding-item">
-								<span class="finding-dot" style="background:{severityColors[sev] || 'var(--muted-fg)'}"></span>
-								<span class="finding-label">{sev}</span>
-								<span class="finding-count">{count}</span>
-							</div>
-						{/each}
-						<div class="finding-item finding-total">
-							<span class="finding-label">Total</span>
-							<span class="finding-count">{ddFindings.total}</span>
-						</div>
-					</div>
-				{/if}
-				{#if data.features.defectdojo && domain}
-					<a href="https://defectdojo.{domain}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm w-full" style="margin-top:0.5rem">Open Dashboard</a>
-				{:else if !data.features.defectdojo}
-					<p class="disabled-msg">Not configured — DEFECTDOJO_URL not set</p>
-				{/if}
-			</div>
-
-			<!-- ── Email ── -->
-			<div class="card">
-				<div class="card-head">
-					<h3>Email</h3>
-					<span class="card-tag">SMTP</span>
-				</div>
-				{#if data.features.smtp}
-					<div class="form-row">
-						<input type="email" bind:value={emailInput} placeholder="recipient@example.com" class="input" />
-						<button onclick={sendEmail} class="btn btn-primary btn-sm">Send</button>
-					</div>
-					{#if emailStatus}
-						<p class="result" class:ok={!emailError} class:err={emailError}>{emailStatus}</p>
-					{/if}
-				{:else}
-					<p class="disabled-msg">Not configured — SMTP_HOST not set</p>
-				{/if}
-			</div>
-
 			<!-- ── ntfy Notifications ── -->
 			<div class="card">
 				<div class="card-head">
@@ -964,7 +1077,7 @@
 				</div>
 				<div class="status-row">
 					<button onclick={checkNtfyStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={ntfyStatusOk}></span>
+					{@render statusIcon(ntfyStatusOk, ntfyStatusText !== 'Not checked')}
 					<span class="status-text">{ntfyStatusText}</span>
 				</div>
 				{#if data.features.ntfy}
@@ -1001,72 +1114,6 @@
 					<p class="disabled-msg">Not configured — KNATIVE_FIBONACCI_URL not set</p>
 				{/if}
 			</div>
-
-			<!-- ── CrowdSec ── -->
-			<div class="card">
-				<div class="card-head">
-					<h3>CrowdSec</h3>
-					<span class="card-tag">Threat Intel</span>
-				</div>
-				<div class="status-row">
-					<button onclick={checkCsStatus} class="btn btn-outline btn-sm">Check Status</button>
-					<span class="status-dot" class:ok={csStatusOk}></span>
-					<span class="status-text">{csStatusText}</span>
-				</div>
-				{#if data.features.crowdsec}
-					<div class="form-row">
-						<input type="text" bind:value={csIp} placeholder="IP address" class="input" />
-						<button onclick={csCheckIp} class="btn btn-secondary btn-sm">Check IP</button>
-					</div>
-					{#if csResultVisible}
-						<p class="result" class:ok={csResultOk} class:err={!csResultOk}>{csResult}</p>
-					{/if}
-				{:else}
-					<p class="disabled-msg">Not configured — CROWDSEC_LAPI_URL not set</p>
-				{/if}
-			</div>
-
-			<!-- ── Linkerd Mesh ── -->
-			<div class="card">
-				<div class="card-head">
-					<h3>Linkerd</h3>
-					<span class="card-tag">Service Mesh</span>
-				</div>
-				<p class="card-desc">mTLS sidecar proxy metrics</p>
-				<button onclick={loadLinkerdStats} class="btn btn-outline btn-sm w-full">Load Stats</button>
-				{#if linkerdResultVisible}
-					<pre class="result-pre" class:ok={linkerdResultOk} class:err={!linkerdResultOk}>{linkerdResult}</pre>
-				{/if}
-			</div>
-
-			<!-- ── Prometheus Demo ── -->
-			<div class="card">
-				<div class="card-head">
-					<h3>Prometheus</h3>
-					<span class="card-tag">Metrics</span>
-				</div>
-				<p class="card-desc">App metrics via prom-client</p>
-				<div class="btn-row">
-					<button onclick={() => loadPromMetrics(true)} class="btn btn-primary btn-sm">Increment Counter</button>
-					<button onclick={() => loadPromMetrics(false)} class="btn btn-outline btn-sm">Refresh</button>
-				</div>
-				{#if promLoaded}
-					<div class="prom-stats">
-						<div class="prom-stat">
-							<span class="prom-val">{promDemoCount}</span>
-							<span class="prom-label">Demo Counter</span>
-						</div>
-						<div class="prom-stat">
-							<span class="prom-val">{promHttpTotal.toLocaleString()}</span>
-							<span class="prom-label">HTTP Requests</span>
-						</div>
-						<div class="prom-stat">
-							<span class="prom-val">{promActive}</span>
-							<span class="prom-label">Active</span>
-						</div>
-					</div>
-				{/if}
-			</div>
 		</div>
 	</section>
 
@@ -1098,7 +1145,7 @@
 		--border-hover: #27272a;
 		--text: #fafafa;
 		--text-secondary: #a1a1aa;
-		--muted-fg: #71717a;
+		--muted-fg: #8b8b93;
 		--accent: #3b82f6;
 		--success: #22c55e;
 		--warning: #eab308;
@@ -1408,7 +1455,7 @@
 	/* ─── Demo Grid ─── */
 	.demo-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
 		gap: 0.75rem;
 	}
 
@@ -1421,10 +1468,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.625rem;
-	}
-
-	.card-wide {
-		grid-column: span 2;
 	}
 
 	.card-head {
@@ -1793,6 +1836,58 @@
 		letter-spacing: 0.04em;
 	}
 
+	.prom-meta {
+		display: flex;
+		gap: 1rem;
+		padding: 0.25rem 0 0;
+	}
+
+	.prom-meta-item {
+		font-size: 0.7rem;
+		font-family: 'JetBrains Mono', 'SF Mono', monospace;
+		color: var(--muted-fg);
+	}
+
+	/* ─── Category Headers ─── */
+	.demo-category {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: var(--text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin: 1.5rem 0 0.75rem;
+		padding-bottom: 0.375rem;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.demo-category:first-of-type {
+		margin-top: 0;
+	}
+
+	/* ─── Status Icons (SVG checkmark/X) ─── */
+	.status-icon {
+		width: 14px;
+		height: 14px;
+		flex-shrink: 0;
+		color: var(--muted-fg);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.status-icon :global(svg) {
+		width: 14px;
+		height: 14px;
+	}
+
+	.status-icon.checked.ok {
+		color: var(--success);
+	}
+
+	.status-icon.checked:not(.ok) {
+		color: var(--danger);
+	}
+
 	/* ─── Footer ─── */
 	.footer {
 		display: flex;
@@ -1825,10 +1920,6 @@
 
 		.demo-grid {
 			grid-template-columns: 1fr;
-		}
-
-		.card-wide {
-			grid-column: span 1;
 		}
 
 		.form-cols {

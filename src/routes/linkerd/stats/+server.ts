@@ -37,7 +37,15 @@ export const GET: RequestHandler = async () => {
 		const resp = await fetch('http://localhost:4191/metrics');
 
 		if (!resp.ok) {
-			return respond({ available: false, request_total: 0, success_total: 0, failure_total: 0, tcp_connections: 0, proxy_memory_bytes: 0, error: `Status ${resp.status}` });
+			return respond({
+				available: false,
+				request_total: 0,
+				success_total: 0,
+				failure_total: 0,
+				tcp_connections: 0,
+				proxy_memory_bytes: 0,
+				error: `Status ${resp.status}`
+			});
 		}
 
 		const text = await resp.text();
@@ -84,8 +92,7 @@ export const GET: RequestHandler = async () => {
 };
 
 function respond(stats: LinkerdStats) {
-	return new Response(
-		JSON.stringify({ ...stats, timestamp: new Date().toISOString() }),
-		{ headers: { 'Content-Type': 'application/json' } }
-	);
+	return new Response(JSON.stringify({ ...stats, timestamp: new Date().toISOString() }), {
+		headers: { 'Content-Type': 'application/json' }
+	});
 }

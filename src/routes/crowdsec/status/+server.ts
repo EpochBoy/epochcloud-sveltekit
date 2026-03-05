@@ -3,10 +3,9 @@ import { config } from '$lib/server/config.js';
 
 export const GET: RequestHandler = async () => {
 	if (!config.crowdsec.enabled) {
-		return new Response(
-			JSON.stringify({ connected: false, error: 'CROWDSEC_LAPI_URL not set' }),
-			{ headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ connected: false, error: 'CROWDSEC_LAPI_URL not set' }), {
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 
 	try {
@@ -21,9 +20,8 @@ export const GET: RequestHandler = async () => {
 			{ headers: { 'Content-Type': 'application/json' } }
 		);
 	} catch (err) {
-		return new Response(
-			JSON.stringify({ connected: false, error: String(err) }),
-			{ headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ connected: false, error: String(err) }), {
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 };

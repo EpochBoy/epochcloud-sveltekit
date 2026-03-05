@@ -3,31 +3,37 @@ import { config } from '$lib/server/config.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	if (!config.crowdsec.enabled) {
-		return new Response(
-			JSON.stringify({ success: false, error: 'CrowdSec not configured' }),
-			{ status: 503, headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ success: false, error: 'CrowdSec not configured' }), {
+			status: 503,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 
 	if (!config.crowdsec.bouncerKey) {
 		return new Response(
-			JSON.stringify({ success: false, error: 'CROWDSEC_BOUNCER_KEY not set — IP lookup unavailable' }),
+			JSON.stringify({
+				success: false,
+				error: 'CROWDSEC_BOUNCER_KEY not set — IP lookup unavailable'
+			}),
 			{ status: 503, headers: { 'Content-Type': 'application/json' } }
 		);
 	}
 
 	const ip = url.searchParams.get('ip');
 	if (!ip) {
-		return new Response(
-			JSON.stringify({ success: false, error: 'ip parameter required' }),
-			{ status: 400, headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ success: false, error: 'ip parameter required' }), {
+			status: 400,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 
 	try {
-		const resp = await fetch(`${config.crowdsec.lapiUrl}/v1/decisions?ip=${encodeURIComponent(ip)}`, {
-			headers: { 'X-Api-Key': config.crowdsec.bouncerKey }
-		});
+		const resp = await fetch(
+			`${config.crowdsec.lapiUrl}/v1/decisions?ip=${encodeURIComponent(ip)}`,
+			{
+				headers: { 'X-Api-Key': config.crowdsec.bouncerKey }
+			}
+		);
 
 		if (resp.status === 200) {
 			const decisions = await resp.json();
@@ -60,9 +66,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			);
 		}
 	} catch (err) {
-		return new Response(
-			JSON.stringify({ success: false, error: String(err) }),
-			{ status: 500, headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ success: false, error: String(err) }), {
+			status: 500,
+			headers: { 'Content-Type': 'application/json' }
+		});
 	}
 };
