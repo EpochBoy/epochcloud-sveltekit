@@ -84,5 +84,30 @@ export const config = {
 		get enabled() {
 			return !!env.GOFEATUREFLAG_URL;
 		}
+	},
+
+	// ntfy push notifications
+	ntfy: {
+		url: env.NTFY_URL || '',
+		get enabled() {
+			return !!env.NTFY_URL;
+		}
+	},
+
+	// Knative fibonacci service
+	knative: {
+		fibonacciUrl: env.KNATIVE_FIBONACCI_URL || '',
+		get enabled() {
+			return !!env.KNATIVE_FIBONACCI_URL;
+		}
+	},
+
+	// CrowdSec LAPI
+	crowdsec: {
+		lapiUrl: env.CROWDSEC_LAPI_URL || '',
+		bouncerKey: env.CROWDSEC_BOUNCER_KEY || '',
+		get enabled() {
+			return !!env.CROWDSEC_LAPI_URL;
+		}
 	}
 };

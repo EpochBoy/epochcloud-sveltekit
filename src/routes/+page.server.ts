@@ -18,7 +18,10 @@ export const load: PageServerLoad = async () => {
 			defectdojo: config.defectdojo.enabled,
 			smtp: config.smtp.enabled,
 			betterauth: config.betterauth.enabled,
-			gofeatureflag: config.gofeatureflag.enabled
+			gofeatureflag: config.gofeatureflag.enabled,
+			ntfy: config.ntfy.enabled,
+			knative: config.knative.enabled,
+			crowdsec: config.crowdsec.enabled
 		}
 	};
 };
