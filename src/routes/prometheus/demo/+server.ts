@@ -41,32 +41,26 @@ export const GET: RequestHandler = async ({ url }) => {
 		demoCounter.inc();
 	}
 
-	// Try aggregated Prometheus query first, fall back to local prom-client
-	let demoCount: number;
+	// Demo counter: always local (immediate feedback for interactive demo)
+	const demoCount = (await demoCounter.get()).values[0]?.value ?? 0;
+
+	// Active requests: always local (point-in-time gauge only meaningful in real-time)
+	const active = (await activeRequests.get()).values[0]?.value ?? 0;
+
+	// HTTP total: try Prometheus for aggregated cross-pod view, fall back to local
 	let httpTotal: number;
-	let active: number;
 	let source: 'prometheus' | 'local';
 
 	try {
-		const [d, h, a] = await Promise.all([
-			queryPrometheus('sum(epochcloud_demo_counter_total)'),
-			queryPrometheus('sum(epochcloud_http_requests_total)'),
-			queryPrometheus('sum(epochcloud_active_requests)')
-		]);
-
-		if (!isNaN(d) && !isNaN(h)) {
-			demoCount = d;
+		const h = await queryPrometheus('sum(epochcloud_http_requests_total)');
+		if (!isNaN(h)) {
 			httpTotal = Math.round(h);
-			active = isNaN(a) ? 0 : a;
 			source = 'prometheus';
 		} else {
 			throw new Error('NaN result');
 		}
 	} catch {
-		// Fallback: local prom-client values (per-pod, not aggregated)
-		demoCount = (await demoCounter.get()).values[0]?.value ?? 0;
 		httpTotal = (await httpRequestsTotal.get()).values.reduce((sum, v) => sum + v.value, 0);
-		active = (await activeRequests.get()).values[0]?.value ?? 0;
 		source = 'local';
 	}
 

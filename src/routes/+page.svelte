@@ -96,9 +96,15 @@
 	let csResultVisible = $state(false);
 
 	// --------------- Linkerd state ---------------
-	let linkerdResult = $state('');
-	let linkerdResultOk = $state(false);
-	let linkerdResultVisible = $state(false);
+	let linkerdData: {
+		inbound: { requests: number; success: number; failures: number };
+		outbound: { requests: number; success: number; failures: number };
+		tcp_in: number;
+		tcp_out: number;
+		memory_mb: string;
+	} | null = $state(null);
+	let linkerdError = $state('');
+	let linkerdLoaded = $state(false);
 
 	// --------------- Prometheus state ---------------
 	let promDemoCount = $state(0);
@@ -472,24 +478,31 @@
 			const resp = await fetch('/linkerd/stats');
 			const d = await resp.json();
 			if (d.available) {
-				const memMB = (d.proxy_memory_bytes / 1024 / 1024).toFixed(1);
-				linkerdResult = [
-					`Requests: ${d.request_total.toLocaleString()}`,
-					`Success: ${d.success_total.toLocaleString()}`,
-					`Failures: ${d.failure_total.toLocaleString()}`,
-					`TCP Connections: ${d.tcp_connections}`,
-					`Proxy Memory: ${memMB} MB`
-				].join('\n');
-				linkerdResultOk = true;
+				linkerdData = {
+					inbound: {
+						requests: d.inbound.request_total,
+						success: d.inbound.success_total,
+						failures: d.inbound.failure_total
+					},
+					outbound: {
+						requests: d.outbound.request_total,
+						success: d.outbound.success_total,
+						failures: d.outbound.failure_total
+					},
+					tcp_in: d.tcp_inbound,
+					tcp_out: d.tcp_outbound,
+					memory_mb: (d.proxy_memory_bytes / 1024 / 1024).toFixed(1)
+				};
+				linkerdError = '';
 			} else {
-				linkerdResult = d.error || 'Linkerd proxy not available';
-				linkerdResultOk = false;
+				linkerdData = null;
+				linkerdError = d.error || 'Linkerd proxy not available';
 			}
-			linkerdResultVisible = true;
+			linkerdLoaded = true;
 		} catch (err) {
-			linkerdResult = String(err);
-			linkerdResultOk = false;
-			linkerdResultVisible = true;
+			linkerdData = null;
+			linkerdError = String(err);
+			linkerdLoaded = true;
 		}
 	}
 
@@ -807,23 +820,23 @@
 					<span class="status-text">{rmqStatusText}</span>
 				</div>
 				{#if data.features.rabbitmq}
-					<div class="form-row">
-						<input
-							type="text"
-							bind:value={rmqMessage}
-							placeholder="Message (optional)"
-							class="input"
-						/>
-						<input
-							type="number"
-							bind:value={rmqBatchCount}
-							min="1"
-							max="50"
-							class="input input-sm"
-							style="max-width:70px"
-						/>
-						<button onclick={rmqPublish} class="btn btn-primary btn-sm">Publish</button>
-						<button onclick={rmqConsume} class="btn btn-outline btn-sm">Consume</button>
+					<div class="form-cols">
+						<div class="form-col">
+							<span class="form-label">Publish</span>
+							<div class="input-row">
+								<span class="input-label">Message</span>
+								<input type="text" bind:value={rmqMessage} placeholder="optional" class="input" />
+							</div>
+							<div class="input-row">
+								<span class="input-label">Count</span>
+								<input type="number" bind:value={rmqBatchCount} min="1" max="50" class="input input-sm" style="max-width:70px" />
+							</div>
+							<button onclick={rmqPublish} class="btn btn-primary btn-sm w-full">Publish</button>
+						</div>
+						<div class="form-col">
+							<span class="form-label">Consume</span>
+							<button onclick={rmqConsume} class="btn btn-outline btn-sm w-full">Check Buffer</button>
+						</div>
 					</div>
 					{#if rmqResultVisible}
 						<p class="result" class:ok={rmqResultOk} class:err={!rmqResultOk}>{rmqResult}</p>
@@ -858,14 +871,27 @@
 					<div class="form-cols">
 						<div class="form-col">
 							<span class="form-label">Set Value</span>
-							<input type="text" bind:value={vkSetKey} placeholder="Key" class="input" />
-							<input type="text" bind:value={vkSetValue} placeholder="Value" class="input" />
-							<input type="number" bind:value={vkSetTtl} placeholder="TTL (s)" class="input" />
+							<div class="input-row">
+								<span class="input-label">Key</span>
+								<input type="text" bind:value={vkSetKey} placeholder="demo" class="input" />
+							</div>
+							<div class="input-row">
+								<span class="input-label">Value</span>
+								<input type="text" bind:value={vkSetValue} placeholder="hello" class="input" />
+							</div>
+							<div class="input-row">
+								<span class="input-label">TTL</span>
+								<input type="number" bind:value={vkSetTtl} placeholder="300" class="input" />
+								<span class="input-unit">sec</span>
+							</div>
 							<button onclick={vkSet} class="btn btn-primary btn-sm w-full">Set</button>
 						</div>
 						<div class="form-col">
 							<span class="form-label">Get Value</span>
-							<input type="text" bind:value={vkGetKey} placeholder="Key" class="input" />
+							<div class="input-row">
+								<span class="input-label">Key</span>
+								<input type="text" bind:value={vkGetKey} placeholder="demo" class="input" />
+							</div>
 							<button onclick={vkGet} class="btn btn-secondary btn-sm w-full">Get</button>
 						</div>
 					</div>
@@ -1027,7 +1053,7 @@
 					<h3>Prometheus</h3>
 					<span class="card-tag">Metrics</span>
 				</div>
-				<p class="card-desc">Aggregated app metrics via Prometheus API</p>
+				<p class="card-desc">Counter &amp; in-flight are per-pod, HTTP total aggregated via Prometheus</p>
 				<div class="btn-row">
 					<button onclick={() => loadPromMetrics(true)} class="btn btn-primary btn-sm"
 						>Increment Counter</button
@@ -1041,19 +1067,21 @@
 						<div class="prom-stat">
 							<span class="prom-val">{promDemoCount}</span>
 							<span class="prom-label">Demo Counter</span>
+							<span class="prom-scope">this pod</span>
 						</div>
 						<div class="prom-stat">
 							<span class="prom-val">{promHttpTotal.toLocaleString()}</span>
-							<span class="prom-label">HTTP Requests</span>
+							<span class="prom-label">HTTP Total</span>
+							<span class="prom-scope">{promSource === 'prometheus' ? 'all pods' : 'this pod'}</span>
 						</div>
 						<div class="prom-stat">
 							<span class="prom-val">{promActive}</span>
-							<span class="prom-label">Active</span>
+							<span class="prom-label">In-Flight</span>
+							<span class="prom-scope">this pod</span>
 						</div>
 					</div>
 					<div class="prom-meta">
 						<span class="prom-meta-item">Pod: {promPod}</span>
-						<span class="prom-meta-item">Source: {promSource}</span>
 					</div>
 				{/if}
 			</div>
@@ -1064,13 +1092,60 @@
 					<h3>Linkerd</h3>
 					<span class="card-tag">Service Mesh</span>
 				</div>
-				<p class="card-desc">mTLS sidecar proxy metrics</p>
+				<p class="card-desc">mTLS proxy — inbound from meshed services, outbound to meshed services</p>
 				<button onclick={loadLinkerdStats} class="btn btn-outline btn-sm w-full">Load Stats</button>
-				{#if linkerdResultVisible}
-					<pre
-						class="result-pre"
-						class:ok={linkerdResultOk}
-						class:err={!linkerdResultOk}>{linkerdResult}</pre>
+				{#if linkerdLoaded}
+					{#if linkerdData}
+						<div class="linkerd-sections">
+							<div class="linkerd-dir">
+								<span class="linkerd-dir-label">Outbound <span class="linkerd-dir-hint">this pod &rarr; services</span></span>
+								<div class="linkerd-stats">
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.outbound.requests.toLocaleString()}</span>
+										<span class="linkerd-stat-label">Requests</span>
+									</div>
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.outbound.success.toLocaleString()}</span>
+										<span class="linkerd-stat-label">Success</span>
+									</div>
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.outbound.failures.toLocaleString()}</span>
+										<span class="linkerd-stat-label">Failures</span>
+									</div>
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.tcp_out}</span>
+										<span class="linkerd-stat-label">TCP</span>
+									</div>
+								</div>
+							</div>
+							<div class="linkerd-dir">
+								<span class="linkerd-dir-label">Inbound <span class="linkerd-dir-hint">services &rarr; this pod</span></span>
+								<div class="linkerd-stats">
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.inbound.requests.toLocaleString()}</span>
+										<span class="linkerd-stat-label">Requests</span>
+									</div>
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.inbound.success.toLocaleString()}</span>
+										<span class="linkerd-stat-label">Success</span>
+									</div>
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.inbound.failures.toLocaleString()}</span>
+										<span class="linkerd-stat-label">Failures</span>
+									</div>
+									<div class="linkerd-stat">
+										<span class="linkerd-val">{linkerdData.tcp_in}</span>
+										<span class="linkerd-stat-label">TCP</span>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="prom-meta">
+							<span class="prom-meta-item">Proxy Memory: {linkerdData.memory_mb} MB</span>
+						</div>
+					{:else}
+						<pre class="result-pre err">{linkerdError}</pre>
+					{/if}
 				{/if}
 			</div>
 
@@ -1888,6 +1963,26 @@
 		color: var(--text-secondary);
 	}
 
+	.input-row {
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	.input-label {
+		font-size: 0.7rem;
+		font-weight: 500;
+		color: var(--muted-fg);
+		min-width: 38px;
+		flex-shrink: 0;
+	}
+
+	.input-unit {
+		font-size: 0.7rem;
+		color: var(--muted-fg);
+		flex-shrink: 0;
+	}
+
 	.input {
 		width: 100%;
 		box-sizing: border-box;
@@ -2174,6 +2269,12 @@
 		letter-spacing: 0.04em;
 	}
 
+	.prom-scope {
+		font-size: 0.6rem;
+		color: var(--muted-fg);
+		font-style: italic;
+	}
+
 	.prom-meta {
 		display: flex;
 		gap: 1rem;
@@ -2196,6 +2297,65 @@
 		margin: 1.5rem 0 0.75rem;
 		padding-bottom: 0.375rem;
 		border-bottom: 1px solid var(--border);
+	}
+
+	/* ─── Linkerd Stats ─── */
+	.linkerd-sections {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.linkerd-dir {
+		padding: 0.5rem 0.625rem;
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 0.5rem;
+	}
+
+	.linkerd-dir-label {
+		font-size: 0.7rem;
+		font-weight: 600;
+		color: var(--text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		display: flex;
+		align-items: center;
+		gap: 0.375rem;
+		margin-bottom: 0.375rem;
+	}
+
+	.linkerd-dir-hint {
+		font-weight: 400;
+		font-size: 0.6rem;
+		color: var(--muted-fg);
+		text-transform: none;
+		letter-spacing: 0;
+	}
+
+	.linkerd-stats {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 0.375rem;
+	}
+
+	.linkerd-stat {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.linkerd-val {
+		font-size: 1rem;
+		font-weight: 700;
+		font-family: 'JetBrains Mono', monospace;
+		color: var(--text);
+	}
+
+	.linkerd-stat-label {
+		font-size: 0.6rem;
+		color: var(--muted-fg);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
 	}
 
 	.demo-category:first-of-type {
