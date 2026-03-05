@@ -30,7 +30,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			headers: {
 				Title: title,
 				Priority: priority,
-				Tags: 'rocket'
+				Tags: 'rocket',
+				...(config.ntfy.user && config.ntfy.password
+					? {
+							Authorization: `Basic ${Buffer.from(`${config.ntfy.user}:${config.ntfy.password}`).toString('base64')}`
+						}
+					: {})
 			},
 			body: message
 		});

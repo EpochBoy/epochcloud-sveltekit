@@ -89,6 +89,8 @@ export const config = {
 	// ntfy push notifications
 	ntfy: {
 		url: env.NTFY_URL || '',
+		user: env.NTFY_USER || '',
+		password: env.NTFY_PASSWORD || '',
 		get enabled() {
 			return !!env.NTFY_URL;
 		}
