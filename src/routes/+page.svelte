@@ -87,6 +87,9 @@
 	let knativeResultVisible = $state(false);
 	let knativeLoading = $state(false);
 
+	// --------------- Active Demo Tab ---------------
+	let activeDemo = $state('rabbitmq');
+
 	// --------------- CrowdSec state ---------------
 	let csStatusText = $state('Not checked');
 	let csStatusOk = $state(false);
@@ -607,7 +610,7 @@
 		'Resend Email'
 	];
 
-	const stackPending = ['Cluster Honeypot'];
+	const stackPending = ['Cluster Honeypot', 'LitmusChaos'];
 
 	const dashboards = [
 		{ name: 'Grafana', sub: 'grafana', desc: 'Metrics & Dashboards' },
@@ -800,16 +803,60 @@
 		</div>
 	</section>
 
-	<!-- ─── Interactive Demos ─── -->
+	<!-- ─── Live Demos ─── -->
 	<section class="section">
 		<div class="section-head">
-			<h2 class="section-title">Interactive Demos</h2>
+			<h2 class="section-title">Live Demos</h2>
+			<span class="count-badge">12</span>
 		</div>
 
-		<!-- ═══ Infrastructure ═══ -->
-		<h3 class="demo-category">Infrastructure</h3>
-		<div class="demo-grid">
-			<!-- ── RabbitMQ ── -->
+		<div class="demo-tabs">
+			<button class="demo-tab" class:active={activeDemo === 'rabbitmq'} onclick={() => activeDemo = 'rabbitmq'}>
+				{#if rmqStatusText !== 'Not checked'}<span class="tab-dot" class:ok={rmqStatusOk}></span>{/if}
+				RabbitMQ
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'valkey'} onclick={() => activeDemo = 'valkey'}>
+				{#if vkStatusText !== 'Not checked'}<span class="tab-dot" class:ok={vkStatusOk}></span>{/if}
+				Valkey
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'email'} onclick={() => activeDemo = 'email'}>
+				Email
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'betterauth'} onclick={() => activeDemo = 'betterauth'}>
+				{#if authStatusText !== 'Not checked'}<span class="tab-dot" class:ok={authStatusOk}></span>{/if}
+				BetterAuth
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'crowdsec'} onclick={() => activeDemo = 'crowdsec'}>
+				{#if csStatusText !== 'Not checked'}<span class="tab-dot" class:ok={csStatusOk}></span>{/if}
+				CrowdSec
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'defectdojo'} onclick={() => activeDemo = 'defectdojo'}>
+				{#if ddStatusText !== 'Not checked'}<span class="tab-dot" class:ok={ddStatusOk}></span>{/if}
+				DefectDojo
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'prometheus'} onclick={() => activeDemo = 'prometheus'}>
+				Prometheus
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'linkerd'} onclick={() => activeDemo = 'linkerd'}>
+				Linkerd
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'chaos'} onclick={() => activeDemo = 'chaos'}>
+				Chaos Testing
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'featureflags'} onclick={() => activeDemo = 'featureflags'}>
+				{#if ffStatusText !== 'Not checked'}<span class="tab-dot" class:ok={ffStatusOk}></span>{/if}
+				Feature Flags
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'ntfy'} onclick={() => activeDemo = 'ntfy'}>
+				{#if ntfyStatusText !== 'Not checked'}<span class="tab-dot" class:ok={ntfyStatusOk}></span>{/if}
+				ntfy
+			</button>
+			<button class="demo-tab" class:active={activeDemo === 'knative'} onclick={() => activeDemo = 'knative'}>
+				Knative
+			</button>
+		</div>
+
+		{#if activeDemo === 'rabbitmq'}
 			<div class="card">
 				<div class="card-head">
 					<h3>RabbitMQ</h3>
@@ -865,8 +912,7 @@
 					<p class="disabled-msg">Not configured — RABBITMQ_HOST not set</p>
 				{/if}
 			</div>
-
-			<!-- ── Valkey Cache ── -->
+		{:else if activeDemo === 'valkey'}
 			<div class="card">
 				<div class="card-head">
 					<h3>Valkey Cache</h3>
@@ -912,8 +958,7 @@
 					<p class="disabled-msg">Not configured — VALKEY_HOST not set</p>
 				{/if}
 			</div>
-
-			<!-- ── Email ── -->
+		{:else if activeDemo === 'email'}
 			<div class="card">
 				<div class="card-head">
 					<h3>Email</h3>
@@ -936,12 +981,7 @@
 					<p class="disabled-msg">Not configured — SMTP_HOST not set</p>
 				{/if}
 			</div>
-		</div>
-
-		<!-- ═══ Security ═══ -->
-		<h3 class="demo-category">Security</h3>
-		<div class="demo-grid">
-			<!-- ── BetterAuth ── -->
+		{:else if activeDemo === 'betterauth'}
 			<div class="card">
 				<div class="card-head">
 					<h3>BetterAuth</h3>
@@ -986,8 +1026,7 @@
 					<p class="disabled-msg">Not configured — BETTERAUTH_URL not set</p>
 				{/if}
 			</div>
-
-			<!-- ── CrowdSec ── -->
+		{:else if activeDemo === 'crowdsec'}
 			<div class="card">
 				<div class="card-head">
 					<h3>CrowdSec</h3>
@@ -1010,8 +1049,7 @@
 					<p class="disabled-msg">Not configured — CROWDSEC_LAPI_URL not set</p>
 				{/if}
 			</div>
-
-			<!-- ── DefectDojo ── -->
+		{:else if activeDemo === 'defectdojo'}
 			<div class="card">
 				<div class="card-head">
 					<h3>DefectDojo</h3>
@@ -1052,12 +1090,7 @@
 					<p class="disabled-msg">Not configured — DEFECTDOJO_URL not set</p>
 				{/if}
 			</div>
-		</div>
-
-		<!-- ═══ Observability ═══ -->
-		<h3 class="demo-category">Observability</h3>
-		<div class="demo-grid">
-			<!-- ── Prometheus Demo ── -->
+		{:else if activeDemo === 'prometheus'}
 			<div class="card">
 				<div class="card-head">
 					<h3>Prometheus</h3>
@@ -1098,8 +1131,7 @@
 					</div>
 				{/if}
 			</div>
-
-			<!-- ── Linkerd Mesh ── -->
+		{:else if activeDemo === 'linkerd'}
 			<div class="card">
 				<div class="card-head">
 					<h3>Linkerd</h3>
@@ -1169,12 +1201,7 @@
 					{/if}
 				{/if}
 			</div>
-
-			<!-- ── Chaos Testing ── -->
-		</div>
-
-		<!-- ═══ Chaos Testing (Full Width) ═══ -->
-		<h3 class="demo-category">Chaos Engineering</h3>
+		{:else if activeDemo === 'chaos'}
 		<div class="chaos-panel">
 			<div class="chaos-header">
 				<div>
@@ -1407,11 +1434,7 @@
 					class:err={!chaosResultOk}>{chaosResult}</pre>
 			{/if}
 		</div>
-
-		<!-- ═══ Platform ═══ -->
-		<h3 class="demo-category">Platform</h3>
-		<div class="demo-grid">
-			<!-- ── Feature Flags ── -->
+		{:else if activeDemo === 'featureflags'}
 			<div class="card">
 				<div class="card-head">
 					<h3>Feature Flags</h3>
@@ -1450,8 +1473,7 @@
 					<p class="disabled-msg">Not configured — GOFEATUREFLAG_URL not set</p>
 				{/if}
 			</div>
-
-			<!-- ── ntfy Notifications ── -->
+		{:else if activeDemo === 'ntfy'}
 			<div class="card">
 				<div class="card-head">
 					<h3>ntfy</h3>
@@ -1479,8 +1501,7 @@
 					<p class="disabled-msg">Not configured — NTFY_URL not set</p>
 				{/if}
 			</div>
-
-			<!-- ── Knative Cold Start ── -->
+		{:else if activeDemo === 'knative'}
 			<div class="card">
 				<div class="card-head">
 					<h3>Knative</h3>
@@ -1516,7 +1537,7 @@
 					<p class="disabled-msg">Not configured — KNATIVE_FIBONACCI_URL not set</p>
 				{/if}
 			</div>
-		</div>
+		{/if}
 	</section>
 
 	<!-- ═══ Pending Stack ═══ -->
@@ -2306,6 +2327,55 @@
 		font-size: 0.7rem;
 		font-family: 'JetBrains Mono', 'SF Mono', monospace;
 		color: var(--muted-fg);
+	}
+
+	/* ─── Demo Tabs ─── */
+	.demo-tabs {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.375rem;
+		margin-bottom: 1rem;
+	}
+
+	.demo-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+		padding: 0.375rem 0.75rem;
+		border-radius: 9999px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		border: 1px solid var(--border);
+		background: transparent;
+		color: var(--muted-fg);
+		transition: all 0.15s ease;
+		font-family: inherit;
+		white-space: nowrap;
+	}
+
+	.demo-tab:hover {
+		color: var(--text-secondary);
+		border-color: var(--border-hover);
+		background: rgba(255, 255, 255, 0.03);
+	}
+
+	.demo-tab.active {
+		color: var(--text);
+		background: rgba(255, 255, 255, 0.08);
+		border-color: var(--border-hover);
+	}
+
+	.tab-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--danger);
+		flex-shrink: 0;
+	}
+
+	.tab-dot.ok {
+		background: var(--success);
 	}
 
 	/* ─── Category Headers ─── */
