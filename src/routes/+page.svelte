@@ -401,7 +401,7 @@
 			const resp = await fetch(`/knative/invoke?n=${knativeN}`);
 			const d = await resp.json();
 			if (d.success) {
-				knativeResult = `Result: ${d.result}\nLatency: ${d.latency_ms}ms${d.cold_start ? ' (cold start!)' : ''}`;
+				knativeResult = `F(${d.n}) = ${d.result}\nLatency: ${d.latency_ms}ms${d.cold_start ? ' (cold start!)' : ''}${d.duration ? `\nCompute: ${d.duration}` : ''}`;
 				knativeResultOk = true;
 			} else {
 				knativeResult = d.error || 'Unknown error';

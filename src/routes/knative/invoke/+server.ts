@@ -24,10 +24,14 @@ export const GET: RequestHandler = async ({ url }) => {
 	const startTime = performance.now();
 
 	try {
-		const resp = await fetch(`${config.knative.fibonacciUrl}/?n=${n}`);
+		const resp = await fetch(`${config.knative.fibonacciUrl}/api/fib`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ n })
+		});
 
 		const elapsed = performance.now() - startTime;
-		const body = await resp.text();
+		const data = await resp.json();
 
 		log('info', 'Knative fibonacci invoked', { n, elapsed_ms: elapsed.toFixed(0) });
 
@@ -35,7 +39,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			JSON.stringify({
 				success: resp.ok,
 				n,
-				result: body.trim(),
+				result: data.result ?? data.error ?? String(data),
+				duration: data.duration ?? null,
 				latency_ms: Math.round(elapsed),
 				cold_start: elapsed > 2000,
 				timestamp: new Date().toISOString()
