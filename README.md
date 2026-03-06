@@ -1,14 +1,14 @@
 # epochcloud-demo
 
-SvelteKit 5 demo app for the EpochCloud Kubernetes platform — 1:1 equivalent of [epochcloud-test](https://github.com/EpochBoy/epochcloud-test) (Go).
+SvelteKit 5 demo app for the EpochCloud Kubernetes platform.
 
 ## Quick Links
 
 | 🌐 Live Sites | 📦 Repos |
 | :------------- | :-------- |
-| [🧪 SvelteKit (Prod)](https://sveltekit.<your-domain>) | [☁️ EpochCloud Infra](https://github.com/EpochBoy/epochcloud) |
-| [🔬 Staging](https://sveltekit-staging.<your-domain>) | [🔬 Go Test App](https://github.com/EpochBoy/epochcloud-test) |
-| [🧑‍💻 Dev](https://sveltekit-dev.<your-domain>) | |
+| [🧪 Demo (Prod)](https://demo.<your-domain>) | [☁️ EpochCloud Infra](https://github.com/EpochBoy/epochcloud) |
+| [🔬 Staging](https://demo-staging.<your-domain>) | |
+| [🧑‍💻 Dev](https://demo-dev.<your-domain>) | |
 
 ## Purpose
 
