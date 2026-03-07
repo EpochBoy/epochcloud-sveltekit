@@ -103,7 +103,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				if (config.rybbit.enabled) {
 					return html.replace(
 						'</head>',
-						`<script src="${config.rybbit.host}/script.js" data-site-id="${config.rybbit.siteId}" defer></script></head>`
+						`<script src="${config.rybbit.host}/api/script.js" data-site-id="${config.rybbit.siteId}" defer></script></head>`
 					);
 				}
 				return html;
