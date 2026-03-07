@@ -795,9 +795,9 @@
 	}
 
 	const stages = [
-		{ label: 'Dev', prefix: 'sveltekit-dev' },
-		{ label: 'Staging', prefix: 'sveltekit-staging' },
-		{ label: 'Prod', prefix: 'sveltekit' }
+		{ label: 'Dev', prefix: 'demo-dev' },
+		{ label: 'Staging', prefix: 'demo-staging' },
+		{ label: 'Prod', prefix: 'demo' }
 	];
 
 	const stackOnline = [
@@ -943,7 +943,7 @@
 			<h1 class="logo">EpochCloud</h1>
 			<span class="env-badge {envBadgeClass(data.environment)}">{data.environment}</span>
 		</div>
-		<p class="tagline">SvelteKit 5 Infrastructure Dashboard</p>
+		<p class="tagline">Infrastructure Dashboard</p>
 		<nav class="stage-nav">
 			{#each stages as stage (stage.label)}
 				<a
@@ -2120,7 +2120,7 @@
 
 	<!-- ─── Footer ─── -->
 	<footer class="footer">
-		<span>SvelteKit 5</span>
+		<span>EpochCloud Demo</span>
 		<span class="footer-sep"></span>
 		<span>{new Date().toISOString()}</span>
 	</footer>
