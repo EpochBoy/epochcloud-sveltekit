@@ -851,7 +851,10 @@
 		'Maddy SMTP',
 		'BetterAuth + Hono',
 		'Resend Email',
-		'Knative Serving'
+		'Knative Serving',
+		'Rybbit Analytics',
+		'GO Feature Flag',
+		'Grafana Faro (Web Vitals)'
 	];
 
 	const stackReview = [
@@ -860,10 +863,7 @@
 		'Falco Runtime',
 		'Falcosidekick',
 		'DefectDojo',
-		'Rybbit Analytics',
-		'Sigma LogQL',
-		'GO Feature Flag',
-		'Grafana Faro (Web Vitals)'
+		'Sigma LogQL'
 	];
 
 	const stackPending = ['Cluster Honeypot'];
