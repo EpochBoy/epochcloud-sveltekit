@@ -7,7 +7,7 @@ export function setupFaro(config: { version: string; environment: string }) {
 	if (faro || typeof window === 'undefined') return;
 
 	faro = initializeFaro({
-		url: '/api/faro',
+		url: '/api/faro/collect',
 		app: {
 			name: 'epochcloud-demo',
 			version: config.version,

@@ -28,14 +28,11 @@ async function connect(): Promise<void> {
 
 	try {
 		connection = await amqplib.connect(getUrl());
-		channel = await connection!.createChannel();
-		await channel!.assertQueue(config.rabbitmq.queue, { durable: true, autoDelete: false });
 
-		rabbitConnected.set(1);
-		backoffMs = 1000;
-		log('info', 'RabbitMQ connected', { host: config.rabbitmq.host });
-
-		connection!.on('close', () => {
+		// Register event handlers IMMEDIATELY after connect, before createChannel.
+		// If the connection drops before handlers are attached, Node.js throws
+		// "Unhandled 'error' event" and crashes the process.
+		connection.on('close', () => {
 			log('warn', 'RabbitMQ connection closed, reconnecting...');
 			rabbitConnected.set(0);
 			channel = null;
@@ -43,10 +40,17 @@ async function connect(): Promise<void> {
 			scheduleReconnect();
 		});
 
-		connection!.on('error', (err) => {
+		connection.on('error', (err) => {
 			log('error', 'RabbitMQ connection error', { error: String(err) });
 			rabbitConnected.set(0);
 		});
+
+		channel = await connection.createChannel();
+		await channel.assertQueue(config.rabbitmq.queue, { durable: true, autoDelete: false });
+
+		rabbitConnected.set(1);
+		backoffMs = 1000;
+		log('info', 'RabbitMQ connected', { host: config.rabbitmq.host });
 	} catch (err) {
 		log('error', 'RabbitMQ connect failed', { error: String(err) });
 		rabbitConnected.set(0);
