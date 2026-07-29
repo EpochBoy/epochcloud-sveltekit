@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { getRabbitStatus, getQueueInfo } from '$lib/server/rabbitmq.js';
 
 export const GET: RequestHandler = async () => {
-	const status = getRabbitStatus();
+	const status = await getRabbitStatus();
 
 	let queueInfo = { messageCount: 0, consumerCount: 0 };
 	if (status.connected) {
