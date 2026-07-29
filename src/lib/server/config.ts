@@ -1,4 +1,16 @@
 import { env } from '$env/dynamic/private';
+import { otelEndpoint } from './otel.js';
+import { readSecret } from './secrets.js';
+
+// Secret-backed values (sourced from Kubernetes Secrets by the chart) resolve
+// once at module load via readSecret: the file named by `<NAME>_FILE` wins,
+// the plain `<NAME>` env var is the fallback. Non-secret settings read env
+// directly. Values that gate an `enabled` getter are hoisted so the getters
+// share the same resolution.
+const rabbitmqHost = readSecret('RABBITMQ_HOST') || '';
+const valkeyHost = readSecret('VALKEY_HOST') || '';
+const databaseUrl = readSecret('DATABASE_URL') || '';
+const defectdojoToken = readSecret('DEFECTDOJO_TOKEN') || '';
 
 export const config = {
 	// Build info - stamped at `vite build` time via the `define` constants in
@@ -19,30 +31,31 @@ export const config = {
 	// Consumer mode
 	consumerMode: env.CONSUMER_MODE === 'true',
 
-	// OpenTelemetry
-	otelEndpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT || 'alloy.alloy.svc.cluster.local:4317',
+	// OpenTelemetry - the endpoint the span exporter is wired to, parsed in
+	// otel.ts. Empty means tracing is off for this process.
+	otelEndpoint,
 
 	// RabbitMQ
 	rabbitmq: {
-		host: env.RABBITMQ_HOST || '',
-		port: parseInt(env.RABBITMQ_PORT || '5672'),
-		username: env.RABBITMQ_USERNAME || '',
-		password: env.RABBITMQ_PASSWORD || '',
-		vhost: env.RABBITMQ_VHOST || '/',
+		host: rabbitmqHost,
+		port: parseInt(readSecret('RABBITMQ_PORT') || '5672'),
+		username: readSecret('RABBITMQ_USERNAME') || '',
+		password: readSecret('RABBITMQ_PASSWORD') || '',
+		vhost: readSecret('RABBITMQ_VHOST') || '/',
 		queue: env.RABBITMQ_QUEUE || 'epochcloud-demo',
 		get enabled() {
-			return !!env.RABBITMQ_HOST;
+			return !!rabbitmqHost;
 		}
 	},
 
 	// Valkey
 	valkey: {
-		host: env.VALKEY_HOST || '',
-		port: parseInt(env.VALKEY_PORT || '6379'),
-		password: env.VALKEY_PASSWORD || '',
-		database: parseInt(env.VALKEY_DATABASE || '0'),
+		host: valkeyHost,
+		port: parseInt(readSecret('VALKEY_PORT') || '6379'),
+		password: readSecret('VALKEY_PASSWORD') || '',
+		database: parseInt(readSecret('VALKEY_DATABASE') || '0'),
 		get enabled() {
-			return !!env.VALKEY_HOST;
+			return !!valkeyHost;
 		}
 	},
 
@@ -51,18 +64,18 @@ export const config = {
 	// `<cluster>-app` Secret (see kubernetes/apps/epochcloud-demo/base/
 	// templates/cnpg-cluster.yaml). Includes user/pass/host/db/sslmode.
 	cnpg: {
-		url: env.DATABASE_URL || '',
+		url: databaseUrl,
 		get enabled() {
-			return !!env.DATABASE_URL;
+			return !!databaseUrl;
 		}
 	},
 
 	// DefectDojo
 	defectdojo: {
 		url: env.DEFECTDOJO_URL || '',
-		token: env.DEFECTDOJO_TOKEN || '',
+		token: defectdojoToken,
 		get enabled() {
-			return !!(env.DEFECTDOJO_URL && env.DEFECTDOJO_TOKEN);
+			return !!(env.DEFECTDOJO_URL && defectdojoToken);
 		}
 	},
 
@@ -104,8 +117,8 @@ export const config = {
 	// ntfy push notifications
 	ntfy: {
 		url: env.NTFY_URL || '',
-		user: env.NTFY_USER || '',
-		password: env.NTFY_PASSWORD || '',
+		user: readSecret('NTFY_USER') || '',
+		password: readSecret('NTFY_PASSWORD') || '',
 		get enabled() {
 			return !!env.NTFY_URL;
 		}
@@ -122,7 +135,7 @@ export const config = {
 	// CrowdSec LAPI
 	crowdsec: {
 		lapiUrl: env.CROWDSEC_LAPI_URL || '',
-		bouncerKey: env.CROWDSEC_BOUNCER_KEY || '',
+		bouncerKey: readSecret('CROWDSEC_BOUNCER_KEY') || '',
 		get enabled() {
 			return !!env.CROWDSEC_LAPI_URL;
 		}

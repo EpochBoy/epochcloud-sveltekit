@@ -4,11 +4,11 @@ SvelteKit 5 demo app for the EpochCloud Kubernetes platform.
 
 ## Quick Links
 
-| 🌐 Live Sites | 📦 Repos |
-| :------------- | :-------- |
-| [🧪 Demo (Prod)](https://demo.<your-domain>) | [☁️ EpochCloud Infra](https://github.com/EpochBoy/epochcloud) |
-| [🔬 Staging](https://demo-staging.<your-domain>) | |
-| [🧑‍💻 Dev](https://demo-dev.<your-domain>) | |
+| 🌐 Live Sites                                    | 📦 Repos                                                     |
+| :----------------------------------------------- | :----------------------------------------------------------- |
+| [🧪 Demo (Prod)](https://demo.<your-domain>)     | [☁️ EpochCloud Infra](https://github.com/EpochBoy/epochcloud) |
+| [🔬 Staging](https://demo-staging.<your-domain>) |                                                              |
+| [🧑‍💻 Dev](https://demo-dev.<your-domain>)       |                                                              |
 
 ## Purpose
 
@@ -26,6 +26,7 @@ SvelteKit 5 demo app for the EpochCloud Kubernetes platform.
 - **Consumer mode** (KEDA-scaled queue consumer)
 - **Rybbit** web analytics (siteId synced from infrastructure)
 - **Grafana Faro** - Web Vitals (LCP, CLS, INP, TTFB), JS errors, browser traces via `@grafana/faro-web-sdk`
+- **Server-side tracing** - OTLP spans per request (`@opentelemetry/sdk-node`)
 
 ## What's in this repo (app concerns)
 
@@ -39,10 +40,12 @@ epochcloud-demo/
 ├── src/
 │   ├── app.html                  # HTML shell
 │   ├── hooks.server.ts           # Metrics middleware, service init
+│   ├── instrumentation.server.ts # Tracing bootstrap, loaded before app code
 │   ├── lib/
 │   │   ├── auth-client.ts        # BetterAuth client SDK
 │   │   └── server/
 │   │       ├── config.ts         # Env var config
+│   │       ├── otel.ts           # OTLP span exporter setup
 │   │       ├── logger.ts         # Structured JSON logging
 │   │       ├── metrics.ts        # Prometheus metrics (prom-client)
 │   │       ├── rabbitmq.ts       # RabbitMQ client (amqplib)
@@ -103,29 +106,46 @@ model is documented in the epochcloud repo: keyless-signing.md.
 
 ## Environment Variables
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `ENVIRONMENT` | `dev` | Environment badge + metrics label |
-| `PORT` | `3000` | HTTP listen port |
-| `CONSUMER_MODE` | `false` | Only `/health` + `/metrics`, starts RabbitMQ consumer |
-| `RABBITMQ_HOST` | _(disabled)_ | RabbitMQ hostname |
-| `RABBITMQ_PORT` | `5672` | RabbitMQ port |
-| `RABBITMQ_USERNAME` | | RabbitMQ user |
-| `RABBITMQ_PASSWORD` | | RabbitMQ password |
-| `RABBITMQ_VHOST` | `/` | RabbitMQ virtual host |
-| `RABBITMQ_QUEUE` | `epochcloud-demo` | Queue name |
-| `VALKEY_HOST` | _(disabled)_ | Valkey/Redis host |
-| `VALKEY_PORT` | `6379` | Valkey port |
-| `VALKEY_PASSWORD` | | Valkey password |
-| `VALKEY_DATABASE` | `0` | Valkey DB number |
-| `DEFECTDOJO_URL` | _(disabled)_ | DefectDojo API URL |
-| `DEFECTDOJO_TOKEN` | | DefectDojo API token |
-| `SMTP_HOST` | _(disabled)_ | Maddy SMTP relay host |
-| `SMTP_PORT` | `587` | SMTP port |
-| `SMTP_FROM` | `noreply@epoch.engineering` | Sender address |
-| `BETTERAUTH_URL` | _(disabled)_ | BetterAuth server URL |
-| `RYBBIT_SITE_ID` | | Rybbit analytics site ID |
-| `RYBBIT_HOST` | | Rybbit analytics host |
+| Variable                      | Default                     | Description                                           |
+| ----------------------------- | --------------------------- | ----------------------------------------------------- |
+| `ENVIRONMENT`                 | `dev`                       | Environment badge + metrics label                     |
+| `PORT`                        | `3000`                      | HTTP listen port                                      |
+| `CONSUMER_MODE`               | `false`                     | Only `/health` + `/metrics`, starts RabbitMQ consumer |
+| `RABBITMQ_HOST`               | _(disabled)_                | RabbitMQ hostname                                     |
+| `RABBITMQ_PORT`               | `5672`                      | RabbitMQ port                                         |
+| `RABBITMQ_USERNAME`           |                             | RabbitMQ user                                         |
+| `RABBITMQ_PASSWORD`           |                             | RabbitMQ password                                     |
+| `RABBITMQ_VHOST`              | `/`                         | RabbitMQ virtual host                                 |
+| `RABBITMQ_QUEUE`              | `epochcloud-demo`           | Queue name                                            |
+| `VALKEY_HOST`                 | _(disabled)_                | Valkey/Redis host                                     |
+| `VALKEY_PORT`                 | `6379`                      | Valkey port                                           |
+| `VALKEY_PASSWORD`             |                             | Valkey password                                       |
+| `VALKEY_DATABASE`             | `0`                         | Valkey DB number                                      |
+| `DEFECTDOJO_URL`              | _(disabled)_                | DefectDojo API URL                                    |
+| `DEFECTDOJO_TOKEN`            |                             | DefectDojo API token                                  |
+| `SMTP_HOST`                   | _(disabled)_                | Maddy SMTP relay host                                 |
+| `SMTP_PORT`                   | `587`                       | SMTP port                                             |
+| `SMTP_FROM`                   | `noreply@epoch.engineering` | Sender address                                        |
+| `BETTERAUTH_URL`              | _(disabled)_                | BetterAuth server URL                                 |
+| `RYBBIT_SITE_ID`              |                             | Rybbit analytics site ID                              |
+| `RYBBIT_HOST`                 |                             | Rybbit analytics host                                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(disabled)_                | OTLP gRPC collector URL                               |
+| `OTEL_SERVICE_NAME`           |                             | Service name on spans, read by the OTel SDK           |
+| `OTEL_RESOURCE_ATTRIBUTES`    |                             | Span resource attributes, read by the SDK             |
+
+Every secret-backed variable (RabbitMQ, Valkey, `DATABASE_URL`,
+`DEFECTDOJO_TOKEN`, `NTFY_USER` / `NTFY_PASSWORD`, `CROWDSEC_BOUNCER_KEY`)
+also accepts a `<NAME>_FILE` variant naming a file to read the value from;
+when both are set the file wins. The charts use the `_FILE` form with mounted
+Secret volumes so secret values never sit in process env
+(`src/lib/server/secrets.ts`).
+
+Tracing is off when `OTEL_EXPORTER_OTLP_ENDPOINT` is unset, so local runs stay
+off the exporter's retry loop. The scheme is load-bearing: the OTLP gRPC
+exporter picks insecure transport credentials only for `http://`, and gives a
+scheme-less value an implicit `https://`, which turns every export into a
+failed TLS handshake against a plaintext collector - silently, at the default
+log level.
 
 Build metadata (version / commit / build time) is stamped at `vite build` time
 by `vite.config.ts` (`define`): the version comes from the `VERSION` file, the
@@ -169,17 +189,17 @@ in-browser signing approval - no cosign key, no SOPS, no cluster access. Copy
 
 ## API Routes
 
-| Path | Method | Description |
-| --- | --- | --- |
-| `/` | GET | Landing page |
-| `/health` | GET | Health check (always 200) |
-| `/metrics` | GET | Prometheus scrape endpoint |
-| `/version` | GET | Build info JSON |
-| `/chaos` | GET | `?action=error\|slow\|load&count=N` |
-| `/rabbitmq/status` | GET | RabbitMQ connection + consumed messages |
-| `/rabbitmq/publish` | GET/POST | Publish message to queue |
-| `/cache/status` | GET | Valkey connection status |
-| `/cache/set` | GET | Set key: `?key=...&value=...&ttl=300` |
-| `/cache/get` | GET | Get key: `?key=...` |
-| `/defectdojo/status` | GET | Products + findings summary |
-| `/email/send` | GET/POST | Send test email via Maddy |
+| Path                 | Method   | Description                             |
+| -------------------- | -------- | --------------------------------------- |
+| `/`                  | GET      | Landing page                            |
+| `/health`            | GET      | Health check (always 200)               |
+| `/metrics`           | GET      | Prometheus scrape endpoint              |
+| `/version`           | GET      | Build info JSON                         |
+| `/chaos`             | GET      | `?action=error\|slow\|load&count=N`     |
+| `/rabbitmq/status`   | GET      | RabbitMQ connection + consumed messages |
+| `/rabbitmq/publish`  | GET/POST | Publish message to queue                |
+| `/cache/status`      | GET      | Valkey connection status                |
+| `/cache/set`         | GET      | Set key: `?key=...&value=...&ttl=300`   |
+| `/cache/get`         | GET      | Get key: `?key=...`                     |
+| `/defectdojo/status` | GET      | Products + findings summary             |
+| `/email/send`        | GET/POST | Send test email via Maddy               |
