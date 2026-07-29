@@ -26,7 +26,11 @@ async function init() {
 		commit: config.commit,
 		environment: config.environment,
 		hostname: config.hostname,
-		consumerMode: config.consumerMode
+		consumerMode: config.consumerMode,
+		// Logged verbatim, scheme included: the scheme is what selects the OTLP
+		// exporter's transport credentials, so it is the first thing to check
+		// when spans stop arriving.
+		otelEndpoint: config.otelEndpoint
 	});
 
 	// Set app info gauge
